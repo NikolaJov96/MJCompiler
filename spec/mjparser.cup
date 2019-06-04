@@ -1,0 +1,312 @@
+package rs.ac.bg.etf.pp1;
+
+import java_cup.runtime.*;
+import org.apache.log4j.*;
+
+import java.io.*;
+import rs.ac.bg.etf.pp1.ast.*;
+
+parser code {:
+
+	boolean errorDetected = false;
+
+	Logger log = Logger.getLogger(getClass());
+
+    // slede redefinisani metodi za prijavu gresaka radi izmene teksta poruke
+
+    public void report_fatal_error(String message, Object info) throws java.lang.Exception {
+      done_parsing();
+      report_error(message, info);
+    }
+
+    public void syntax_error(Symbol cur_token) {
+        report_error("\nSintaksna greska", cur_token);
+    }
+
+    public void unrecovered_syntax_error(Symbol cur_token) throws java.lang.Exception {
+        report_fatal_error("Fatalna greska, parsiranje se ne moze nastaviti", cur_token);
+    }
+
+    public void report_error(String message, Object info) {
+    	errorDetected = true;
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.error(msg.toString());
+    }
+
+    public void report_info(String message, Object info) {
+    	StringBuilder msg = new StringBuilder(message); 
+    	if (info instanceof Symbol)
+            msg.append (" na liniji ").append(((Symbol)info).left);
+        log.info(msg.toString());
+    }
+    
+:}
+
+scan with {:
+	Symbol s = this.getScanner().next_token();
+	if (s != null && s.value != null) 
+		log.info(s.toString() + " " + s.value.toString());
+	return s;
+:}
+
+terminal PROG, PRINT, READ, RETURN, VOID, CONST, ENUM, BREAK, CONTINUE;
+terminal COMMA, FOR, SEMI, DOT, NEW;
+terminal LBRACE, RBRACE, LPAREN, RPAREN, LBRACK, RBRACK;
+terminal PLUS, MINUS, EQUAL, MUL, DIV, MOD, INC, DEC;
+terminal IF, ELSE, AND, OR, CEQ, CNEQ, CGT, CGE, CLT, CLE;
+terminal Integer NUMCONST;
+terminal Character CHARCONST;
+terminal Boolean BOOLCONST;
+terminal String IDENT;
+
+nonterminal CallParamList, CallPars;
+nonterminal Addop, Mulop, Relop;
+nonterminal ExprStat, ArrayType, OptArrayInit;
+nonterminal Consts, ConstDecl, ConstList;
+nonterminal DesignatorSpec, ExprStatement, DesigSpecList;
+nonterminal IfCond, Else;
+nonterminal EnumMem, EnumDecl, EnumList;
+nonterminal ForLoopCond, ForInitStat, ForLoopTag, ForFinalStat;
+nonterminal MethodParam, MethodParamList, MethodParams;
+nonterminal FunCall;
+nonterminal MethodDecl, MethodDeclList, MethVarDeclList;
+nonterminal Statement, StatementList;
+nonterminal GlobalVarDecl, VarDecl, GlobalDeclList, Var, VarList;
+
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Expr, Type, ReturnType, AddopExpr, Factor;
+nonterminal rs.etf.pp1.symboltable.concepts.Struct Term, Condition, CondTerm, CondFact, ArrayInitList;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj ProgName, Program, Designator, DesignatorName, EnumName, MethodType;
+
+precedence left ELSE;
+
+Program ::= (Program) PROG ProgName GlobalDeclList LBRACE MethodDeclList RBRACE 
+;
+
+ProgName ::= (ProgName) IDENT:name
+;
+
+GlobalDeclList ::= (VarDeclarations) GlobalDeclList GlobalVarDecl  
+				| (NoVarDecl) // epsilon 
+;
+
+GlobalVarDecl ::= (VarDeclConst) ConstDecl
+		    | (VarDeclEnum) EnumDecl
+		    | (VarDeclVar) VarDecl
+;
+
+ConstDecl ::= (ConstDecl) CONST Type ConstList SEMI
+;
+
+Type ::= (Type) IDENT:name
+;
+
+ConstList ::= (ConsList) ConstList COMMA Consts
+			| (SingleCon) Consts
+;
+
+Consts ::= (NumConstInit) IDENT:name EQUAL NUMCONST:val
+		| (BoolConstInit) IDENT:name EQUAL BOOLCONST:val
+		| (CharConstInit) IDENT:name EQUAL CHARCONST:val
+;
+
+EnumDecl ::= (EnumDecl) ENUM EnumName LBRACE EnumList RBRACE
+;
+
+EnumName ::= (EnumName) IDENT:name
+;
+
+EnumList ::= (EnumMemList) EnumList COMMA EnumMem
+             | (SingleMem) EnumMem
+;
+
+EnumMem ::= (EnumMemDef) IDENT:name EQUAL NUMCONST:val
+			| (EnumMemUnDef) IDENT:name
+;
+
+VarDecl ::= (VarsDecl) Type VarList SEMI
+			   | (VarDeclError) error SEMI
+				 {: parser.report_info("successful recovery from error in variable declaration", null); :}
+;
+
+VarList ::= (VarsList) VarList COMMA Var
+ 			| (SingleVar) Var
+;
+
+Var ::= (BasicVar) IDENT:name
+		| (ArrayVar) IDENT:name LBRACK RBRACK
+		| (VarError) error
+		  {: parser.report_info("successful recovery from error in variable identifier", null); :}
+;
+
+MethodDeclList ::= (MethodDecls) MethodDeclList MethodDecl
+				   | (NoMethodDecl) // epsilon
+;
+
+MethodDecl ::= (MethodDecl) MethodType MethodParamList MethVarDeclList LBRACE StatementList RBRACE 
+;
+
+MethodType ::= (MethodType) ReturnType IDENT:name
+;
+
+ReturnType ::= (VoidReturnType) VOID
+			   | (OtherReturnType) Type
+;
+
+MethodParamList ::= (MethodParameterList) LPAREN MethodParams RPAREN
+                    | (EmptyMethodParameterList) LPAREN RPAREN
+;
+
+MethodParams ::= (FormalParameters) MethodParams COMMA MethodParam
+             | (OneFormalParameter) MethodParam
+;
+
+MethodParam ::= (SimpleMethodParameter) Type IDENT:name
+              | (ArrayMethodParameter) Type IDENT:name LBRACK RBRACK
+			  | (MethodParameterError) error
+			    {: parser.report_info("successful recovery from error in method parameter ", null); :}
+;
+
+MethVarDeclList ::= (VariableDeclarationList) MethVarDeclList VarDecl
+                    | (EmptyVariableDeclarationList) // epsilon
+;
+
+StatementList ::= (Statements) StatementList Statement 
+				  | (NoStmt) // epsilon
+;
+
+Statement ::= (ExpressionStatement) ExprStatement SEMI
+              | (IfStat) IF LPAREN IfCond RPAREN Statement
+              | (IfElseStat) IF LPAREN IfCond RPAREN Statement Else Statement
+              | (ForStat) ForLoopTag LPAREN ForInitStat SEMI ForLoopCond SEMI ForFinalStat RPAREN Statement
+              | (BreakStat) BREAK SEMI
+              | (ContStat) CONTINUE SEMI
+              | (ExprRetStat) RETURN Expr SEMI
+              | (VoidRetStat) RETURN SEMI
+              | (ReadStat) READ LPAREN Designator RPAREN SEMI
+              | (PrintSingleStat) PRINT LPAREN Expr RPAREN SEMI
+              | (PrintMultiStat) PRINT LPAREN Expr COMMA NUMCONST:val RPAREN SEMI
+              | (NestedBlock) LBRACE StatementList RBRACE
+;
+
+ExprStatement ::= (AssignExprStatement) ExprStat
+                  | (FuncCallExprStatement) FunCall
+                  | (IncExprStatement) Designator INC
+                  | (DecExprStatement) Designator DEC
+;
+
+ExprStat ::= (AssignStat) Designator EQUAL Expr
+             | (AssignStatError) error
+               {: parser.report_info("successful recovery from error in assign statement", null); :}
+;
+
+FunCall ::= (FunCall) Designator LPAREN CallParamList RPAREN
+;
+
+Designator ::= (Designator) DesignatorName DesigSpecList
+;
+
+DesignatorName ::= (DesignatorName) IDENT:name
+;
+
+DesigSpecList ::= (DesignatorSpecList) DesigSpecList DesignatorSpec
+                  | (NoDesignatorSpec) // epsilon
+;
+
+DesignatorSpec ::= (DesignatorEnumMember) DOT IDENT:name
+                   | (DesignatorArrayMember) LBRACK Expr RBRACK
+;
+
+CallParamList ::= (CallParameterList) CallPars
+                 | (EmptyCallParameterList) // epsilon
+;
+
+CallPars ::= (ActualParameters) CallPars COMMA Expr
+            | (OneActualParameter) Expr
+;
+
+IfCond ::= (IfCond) Condition
+;
+
+Else ::= (Else) ELSE
+;
+
+ForLoopTag ::= (ForLoopTag) FOR
+;
+
+ForInitStat ::= (NonEmptyForInitStat) ExprStatement
+                | (EmptyForInitStat) // epsilon
+;
+
+ForLoopCond ::= (NonEmptyForLoopCond) Condition
+                 | (EmptyForLoopCond) // epsilon
+;
+
+Condition ::= (ManyTermCondition) Condition OR CondTerm
+              | (OneTermCondition) CondTerm
+              | (IllegalConditionError) error
+                {: parser.report_info("successful recovery from error in condition", null); :}
+;
+
+CondTerm ::= (ManyFactorCondTerm) CondTerm AND CondFact
+             | (OneFactorCondTerm) CondFact
+;
+
+CondFact ::= (SingleCondFact) Expr
+             | (ComplexCondFact) Expr Relop Expr
+;
+
+ForFinalStat ::= (NonEmptyForFinalStat) ExprStatement
+                 | (EmptyForFinalStat) // epsilon
+;
+
+Expr ::= (Expression) AddopExpr
+         | (NegatedExpression) MINUS AddopExpr
+;
+
+AddopExpr ::= (AddopExpression) AddopExpr Addop Term
+              | (TermExpression) Term
+;
+
+Term ::= (AddopTerm) Term Mulop Factor
+         | (FactorTerm) Factor
+;
+
+Factor ::= (DesignatorFact) Designator
+           | (FuncCallFact) FunCall
+           | (NumConstFact) NUMCONST:val
+           | (CharConstFact) CHARCONST:val
+		   | (BoolConstFact) BOOLCONST:val
+		   | (ComplexFact) LPAREN Expr RPAREN 
+		   | (NewObjFact) NEW Type
+		   | (NewArrayFact) ArrayType OptArrayInit
+;
+
+ArrayType ::= (ArrayType) NEW Type LBRACK Expr RBRACK
+;
+
+OptArrayInit ::= (ArrayInitializer) LBRACE ArrayInitList RBRACE
+              | (NoArrayInit) // epsilon
+;
+
+ArrayInitList ::= (ArrayInitializerList) ArrayInitList COMMA Expr
+                  | (ArrayInitializerExpr) Expr
+; 
+
+Relop ::= (RelopEQ) CEQ
+          | (RelopNEQ) CNEQ
+		  | (RelopGT) CGT
+		  | (RelopGE) CGE
+		  | (RelopLT) CLT
+		  | (RelopLE) CLE
+;
+
+Addop ::= (OpPlus) PLUS
+          | (OpMinus) MINUS
+;
+
+Mulop ::= (OpMul) MUL
+          | (OpDiv) DIV
+		  | (OpMod) MOD
+;

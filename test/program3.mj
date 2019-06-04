@@ -1,0 +1,29 @@
+program helloworld
+const int x = 10;
+const int y = 20;
+enum Thing {ThingA, ThingB = 42}
+{
+    int f(Thing t) {return 0;}
+
+    int rec(int i) {
+        if (i == 0) {return 0;}
+        return 1 + rec(i - 1);
+    }
+
+    void main() int x; Thing a[], d[], b, c; int aa[]; {
+        a = new Thing[10];
+        b = a[0];
+        a[0] = b;
+        b = c;
+        b = Thing.ThingA;
+        a[0] = Thing.ThingA;
+        b = Thing.ThingB;
+        print(b);
+        a[0] = Thing.ThingB;
+        print(a[0]);
+        print(rec(13));
+        //a = b;
+        //b = a;
+        //a = Thin.ThingA;
+    }
+}

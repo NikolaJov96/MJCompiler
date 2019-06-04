@@ -1,0 +1,19 @@
+program superTest
+	enum Day {MON, TUE, WEN, THU, FRI, SAT, SUN}
+	int x[];
+{
+	
+	Day f() {
+		return Day.TUE;
+	}
+	
+	void main() {
+		x = new int[1];
+		x[0] = f();
+		print(x[0]);
+		x[0]++;
+		print(x[0]);
+		x[0] = x[0] + f();
+		print(x[0]);
+	}
+}

@@ -1,0 +1,19 @@
+program MJProgram
+int x, 2z;
+char y--, g;
+int 2x, i, j, k;
+{
+    void main() {
+        x = --;
+        if (1) {
+            // do something
+        }
+        if (x--) {
+            // error in condition
+        }
+    }
+    int f(int x, int y--) {}
+    int g(int x++, char g) {}
+    void h(int 2r) {}
+    void m(32x) {}
+}

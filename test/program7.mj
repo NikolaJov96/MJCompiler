@@ -1,0 +1,14 @@
+program mjprogram
+enum ErrorEnum {ONE=1, ZERO=0, ONE_AGAIN}
+{
+    void main() int y, g[], d[]; {
+        x = 1;
+        y = 'a';
+        if (y) {
+
+        }
+        if (g > d) {}
+        break;
+        return 5;
+    }
+}

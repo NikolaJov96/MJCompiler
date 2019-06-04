@@ -1,0 +1,15 @@
+program MJProgram
+    int x, y;
+{
+    void main() {
+        print(42);
+        print(42, 3);
+    }
+
+    void f(int m, int n) {
+        read(x);
+        print(x);
+        x = y + 5;
+        print(y, 10);
+    }
+}
