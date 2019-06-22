@@ -126,8 +126,8 @@ EnumMem ::= (EnumMemDef) IDENT:name EQUAL NUMCONST:val
 ;
 
 VarDecl ::= (VarsDecl) Type VarList SEMI
-			   | (VarDeclError) error SEMI
-				 {: parser.report_info("successful recovery from error in variable declaration", null); :}
+			| (VarDeclError) error SEMI
+			  {: parser.report_info("successful recovery from error in variable declaration", null); :}
 ;
 
 VarList ::= (VarsList) VarList COMMA Var

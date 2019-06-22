@@ -15,5 +15,7 @@ program superTest
 		print(x[0]);
 		x[0] = x[0] + f();
 		print(x[0]);
+		print(eol);
+		print(chr(ord('B') + 1));
 	}
 }

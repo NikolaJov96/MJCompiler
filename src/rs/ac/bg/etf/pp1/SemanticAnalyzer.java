@@ -113,7 +113,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     @Override
     public void visit(ProgName progName) {
         String programName = progName.getName();
-        if (nameExistsInCurrentScope(programName, progName)) { programName = "mjprogram__"; }
+        if (nameExistsInCurrentScope(programName, progName)) { programName = "__no_name_"; }
         progName.obj = SymbolTable.insert(Obj.Prog, programName, SymbolTable.noType);
         SymbolTable.openScope();
         report_info("Program name declared: " + programName, progName);
