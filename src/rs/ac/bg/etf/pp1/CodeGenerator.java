@@ -184,7 +184,6 @@ public class CodeGenerator extends VisitorAdaptor {
         Code.put(Code.newarray);
         if (arrayType.getType().struct == SymbolTable.charType) { Code.put(0); }
         else { Code.put(1); }
-
         try {
 	        int arrayLen = ((NumConstFact)((FactorTerm)((TermExpression)((Expression)
 	        		arrayType.getExpr()).getAddopExpr()).getTerm()).getFactor()).getVal();

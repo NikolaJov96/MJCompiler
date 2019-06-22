@@ -27,12 +27,10 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 	        this.error = false;
 	    }
 	    int expectedNumberOfArguments() { return requiredParams; }
-	    String processActualParam(Expr expr) {
-	        String errorMsg = null;
+	    String processCallParam(Expr expr) {
 	        if (processedParams == requiredParams) {
-	            errorMsg = "Error: number of arguments in function call too high";
 	            error = true;
-	            return errorMsg;
+	            return "Error: number of arguments in function call too high";
 	        }
 	        int currParam = processedParams;
 	        processedParams++;
@@ -40,9 +38,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 	            if (obj.getFpPos() == currParam) {
 	            	if (compatibleWithEnum(obj.getType(), expr)) { return null; }
 	                if (!expr.struct.assignableTo(obj.getType())) {
-	                    errorMsg = "Error: invalid argument type " + obj.getName();
 	                    error = true;
-	                    return errorMsg;
+	                    return "Error: invalid argument type " + obj.getName();
 	                }
 	            }
 	        }
@@ -58,7 +55,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     private int varsCount = 0;
     private int forLoopNestingLevel = 0;
-    private int formalParamCount = 0;
+    private int methodParamCount = 0;
     private int arrayInitListLen = 0;
     private boolean returnFound = false;
     private Type lastDeclaredType = null;
@@ -101,14 +98,8 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
         return false;
     }
-
-    private String findMethodMain() {
-        Obj mainObjNode = SymbolTable.currentScope.findSymbol("main");
-        if (mainObjNode == null) { return "Error: main declaration is required"; }
-        if (mainObjNode.getType() != SymbolTable.noType) { return "Error: main return type must be void"; }
-        if (mainObjNode.getLevel() > 0) { return "Error: main requres 0 parameters"; }
-        return null;
-    }
+    
+    // Visits
 
     @Override
     public void visit(ProgName progName) {
@@ -121,7 +112,12 @@ public class SemanticAnalyzer extends VisitorAdaptor {
 
     @Override
     public void visit(Program program) {
-        String errMsg = findMethodMain();
+        String errMsg = null;
+        Obj mainObjNode = SymbolTable.currentScope.findSymbol("main");
+        if (mainObjNode == null) { errMsg = "Error: main declaration is required"; }
+        if (mainObjNode.getType() != SymbolTable.noType) { errMsg = "Error: main return type must be void"; }
+        if (mainObjNode.getLevel() > 0) { errMsg = "Error: main requres 0 parameters"; }
+        
         if (errMsg != null) { report_error(errMsg, null); }
         varsCount = SymbolTable.currentScope().getnVars();
         if (varsCount > 65536) {
@@ -300,11 +296,11 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         }
         SymbolTable.chainLocalSymbols(currMethod);
         SymbolTable.closeScope();
-        currMethod.setLevel(formalParamCount);
+        currMethod.setLevel(methodParamCount);
         report_info("Outside method " + currMethod.getName(), null);
         returnFound = false;
         currMethod = null;
-        formalParamCount = 0;
+        methodParamCount = 0;
     }
 
     @Override
@@ -335,10 +331,9 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     public void visit(SimpleMethodParameter param) {
         if (lastDeclaredType.struct == SymbolTable.noType) { return; }
         String name = param.getName();
-        if (nameExistsInCurrentScope(name, param))
-            return;
+        if (nameExistsInCurrentScope(name, param)) { return; }
         Obj objNode = SymbolTable.insert(Obj.Var, name, lastDeclaredType.struct);
-        objNode.setFpPos(formalParamCount++);
+        objNode.setFpPos(methodParamCount++);
         report_info("Formal parameter declared: name: " + name + ", type: " + param.getType().getName(), param);
     }
 
@@ -351,7 +346,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         String typeName = type.getName() + "[]";
         Obj arrayTypeNode = SymbolTable.find(typeName);
         Obj node = SymbolTable.insert(Obj.Var, name, arrayTypeNode.getType());
-        node.setFpPos(formalParamCount++);
+        node.setFpPos(methodParamCount++);
         report_info("Formal parameter declared: name: " + name + ", type: " + typeName, param);
     }
 
@@ -541,7 +536,7 @@ public class SemanticAnalyzer extends VisitorAdaptor {
         if (FunCall.class == designator.getParent().getClass()) {
             if (currMethod != null && currMethod.getName() == designator.obj.getName()) {
                 SymbolTable.chainLocalSymbols(currMethod);
-                functionDeclaratorStack.addFirst(new FunctionDeclarator(formalParamCount, currMethod.getLocalSymbols()));
+                functionDeclaratorStack.addFirst(new FunctionDeclarator(methodParamCount, currMethod.getLocalSymbols()));
             } else {
                 functionDeclaratorStack.addFirst(new FunctionDeclarator(designator.getDesignatorName().obj));
             }
@@ -729,16 +724,16 @@ public class SemanticAnalyzer extends VisitorAdaptor {
     }
 
     @Override
-    public void visit(ActualParameters params) {
+    public void visit(CallParameters params) {
         if (functionDeclaratorStack.peekFirst().errorFound()) { return; }
-        String errorMsg = functionDeclaratorStack.peekFirst().processActualParam(params.getExpr());
+        String errorMsg = functionDeclaratorStack.peekFirst().processCallParam(params.getExpr());
         if (errorMsg != null) { report_error(errorMsg, params); }
     }
 
     @Override
-    public void visit(OneActualParameter actParam) {
+    public void visit(OneCallParameter actParam) {
         if (functionDeclaratorStack.peekFirst().errorFound()) { return; }
-        String errorMsg = functionDeclaratorStack.peekFirst().processActualParam(actParam.getExpr());
+        String errorMsg = functionDeclaratorStack.peekFirst().processCallParam(actParam.getExpr());
         if (errorMsg != null) { report_error(errorMsg, actParam); }
     }
 

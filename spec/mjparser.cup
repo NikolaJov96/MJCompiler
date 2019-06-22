@@ -222,8 +222,8 @@ CallParamList ::= (CallParameterList) CallPars
                  | (EmptyCallParameterList) // epsilon
 ;
 
-CallPars ::= (ActualParameters) CallPars COMMA Expr
-            | (OneActualParameter) Expr
+CallPars ::= (CallParameters) CallPars COMMA Expr
+            | (OneCallParameter) Expr
 ;
 
 IfCond ::= (IfCond) Condition
